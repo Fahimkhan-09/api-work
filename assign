@@ -1,0 +1,47 @@
+from flask import Flask, request, jsonify
+import requests
+from retell import Retell
+
+app = Flask(_name_)
+
+@app.route('/create-agent', methods=['POST'])
+def create_agent():
+    data = request.json
+    provider = data.get('provider')
+
+    if provider == 'vapi':
+        token = data.get('api_key')
+        payload = data.get('payload', {})
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post("https://api.vapi.ai/assistant", json=payload, headers=headers)
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    elif provider == 'retell':
+        api_key = data.get('api_key')
+        response_engine = data.get('response_engine', {})
+        voice_id = data.get('voice_id')
+
+        try:
+            client = Retell(api_key=api_key)
+            agent_response = client.agent.create(
+                response_engine=response_engine,
+                voice_id=voice_id
+            )
+            return jsonify({"agent_id": agent_response.agent_id}), 201
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    else:
+        return jsonify({"error": "Unsupported provider. Use 'vapi' or 'retell'."}), 400
+
+
+if _name_ == '_main_':
+    app.run(debug=True)
